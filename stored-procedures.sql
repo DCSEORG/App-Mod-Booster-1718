@@ -186,7 +186,7 @@ END
 GO
 
 -- =============================================
--- Delete an expense (only Draft expenses)
+-- Delete an expense (only Draft status expenses can be deleted)
 -- =============================================
 CREATE OR ALTER PROCEDURE dbo.usp_DeleteExpense
     @ExpenseId INT
@@ -194,7 +194,11 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    DELETE FROM dbo.Expenses WHERE ExpenseId = @ExpenseId;
+    -- Only allow deletion of Draft expenses to prevent accidental removal
+    -- of submitted or approved expenses
+    DELETE FROM dbo.Expenses
+    WHERE ExpenseId = @ExpenseId
+      AND StatusId = (SELECT StatusId FROM dbo.ExpenseStatus WHERE StatusName = 'Draft');
 END
 GO
 

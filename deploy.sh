@@ -120,20 +120,24 @@ echo "  ✓ Python packages installed"
 
 # ============================================================
 # 7. Update Python scripts with actual server details
+# (uses temp copies to avoid modifying source files)
 # ============================================================
 echo ""
 echo "Step 7: Updating Python scripts with server details..."
-sed -i.bak "s|SERVER = \"example.database.windows.net\"|SERVER = \"${SQL_SERVER_FQDN}\"|g" run-sql.py && rm -f run-sql.py.bak
-sed -i.bak "s|SERVER = \"example.database.windows.net\"|SERVER = \"${SQL_SERVER_FQDN}\"|g" run-sql-dbrole.py && rm -f run-sql-dbrole.py.bak
-sed -i.bak "s|SERVER = \"example.database.windows.net\"|SERVER = \"${SQL_SERVER_FQDN}\"|g" run-sql-stored-procs.py && rm -f run-sql-stored-procs.py.bak
-echo "  ✓ Scripts updated with server: $SQL_SERVER_FQDN"
+cp run-sql.py run-sql-deploy.py
+cp run-sql-dbrole.py run-sql-dbrole-deploy.py
+cp run-sql-stored-procs.py run-sql-stored-procs-deploy.py
+sed -i.bak "s|SERVER = \"example.database.windows.net\"|SERVER = \"${SQL_SERVER_FQDN}\"|g" run-sql-deploy.py && rm -f run-sql-deploy.py.bak
+sed -i.bak "s|SERVER = \"example.database.windows.net\"|SERVER = \"${SQL_SERVER_FQDN}\"|g" run-sql-dbrole-deploy.py && rm -f run-sql-dbrole-deploy.py.bak
+sed -i.bak "s|SERVER = \"example.database.windows.net\"|SERVER = \"${SQL_SERVER_FQDN}\"|g" run-sql-stored-procs-deploy.py && rm -f run-sql-stored-procs-deploy.py.bak
+echo "  ✓ Temp deployment scripts created for server: $SQL_SERVER_FQDN"
 
 # ============================================================
 # 8. Import database schema
 # ============================================================
 echo ""
 echo "Step 8: Importing database schema..."
-python3 run-sql.py
+python3 run-sql-deploy.py
 echo "  ✓ Database schema imported"
 
 # ============================================================
@@ -141,9 +145,11 @@ echo "  ✓ Database schema imported"
 # ============================================================
 echo ""
 echo "Step 9: Configuring database roles for managed identity..."
-# Replace placeholder in script.sql with actual managed identity name (cross-platform)
-sed -i.bak "s/mid-AppModAssist-020317/${MANAGED_IDENTITY_NAME}/g" script.sql && rm -f script.sql.bak
-python3 run-sql-dbrole.py
+# Replace placeholder in a temp copy of script.sql (preserves original file)
+cp script.sql script-deploy.sql
+sed -i.bak "s/MANAGED-IDENTITY-NAME/${MANAGED_IDENTITY_NAME}/g" script-deploy.sql && rm -f script-deploy.sql.bak
+sed -i.bak "s|SQL_SCRIPT_FILE = \"script.sql\"|SQL_SCRIPT_FILE = \"script-deploy.sql\"|g" run-sql-dbrole-deploy.py && rm -f run-sql-dbrole-deploy.py.bak
+python3 run-sql-dbrole-deploy.py
 echo "  ✓ Database roles configured"
 
 # ============================================================
@@ -151,8 +157,11 @@ echo "  ✓ Database roles configured"
 # ============================================================
 echo ""
 echo "Step 10: Creating stored procedures..."
-python3 run-sql-stored-procs.py
+python3 run-sql-stored-procs-deploy.py
 echo "  ✓ Stored procedures created"
+
+# Cleanup temp deployment files
+rm -f run-sql-deploy.py run-sql-dbrole-deploy.py run-sql-stored-procs-deploy.py script-deploy.sql
 
 # ============================================================
 # 11. Deploy application code

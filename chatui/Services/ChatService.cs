@@ -244,6 +244,8 @@ public class ChatService : IChatService
                     var args = JsonNode.Parse(argumentsJson);
                     var body = new
                     {
+                        // userId=1 (Alice) is used as the default for demo purposes.
+                        // In a production system, this would come from authenticated user context.
                         userId = 1,
                         categoryId = args?["categoryId"]?.GetValue<int>() ?? 1,
                         amountGBP = args?["amountGBP"]?.GetValue<double>() ?? 0,
@@ -269,6 +271,8 @@ public class ChatService : IChatService
                 {
                     var args = JsonNode.Parse(argumentsJson);
                     var expenseId = args?["expenseId"]?.GetValue<int>() ?? 0;
+                    // reviewedBy=2 (Bob Manager) is used as the default for demo purposes.
+                    // In a production system, this would come from authenticated user context.
                     var body = new StringContent("""{"reviewedBy":2}""", System.Text.Encoding.UTF8, "application/json");
                     var resp = await httpClient.PutAsync($"{ExpenseApiBaseUrl}/api/expenses/{expenseId}/approve", body);
                     return resp.IsSuccessStatusCode ? "Expense approved successfully." : $"Error: {await resp.Content.ReadAsStringAsync()}";
@@ -278,6 +282,8 @@ public class ChatService : IChatService
                 {
                     var args = JsonNode.Parse(argumentsJson);
                     var expenseId = args?["expenseId"]?.GetValue<int>() ?? 0;
+                    // reviewedBy=2 (Bob Manager) is used as the default for demo purposes.
+                    // In a production system, this would come from authenticated user context.
                     var body = new StringContent("""{"reviewedBy":2}""", System.Text.Encoding.UTF8, "application/json");
                     var resp = await httpClient.PutAsync($"{ExpenseApiBaseUrl}/api/expenses/{expenseId}/reject", body);
                     return resp.IsSuccessStatusCode ? "Expense rejected successfully." : $"Error: {await resp.Content.ReadAsStringAsync()}";
