@@ -1,0 +1,38 @@
+# .NET build artifacts
+bin/
+obj/
+*.user
+.vs/
+.vscode/
+*.suo
+*.cache
+
+# Publish output
+publish/
+/tmp/
+
+# NuGet
+*.nupkg
+packages/
+.nuget/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+venv/
+.venv/
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+
+# NOTE: app.zip is intentionally NOT excluded so it can be committed
+# and used in deployment scripts.
+# app.zip
+
+# Local settings overrides (should not be committed)
+appsettings.local.json
