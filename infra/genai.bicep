@@ -50,12 +50,12 @@ resource gpt4oDeployment 'Microsoft.CognitiveServices/accounts/deployments@2023-
   }
 }
 
-// Azure Cognitive Search (AI Search) - Standard tier (comparable to S0 for Cognitive Services)
+// Azure Cognitive Search (AI Search) - Standard S1 tier
 resource aiSearch 'Microsoft.Search/searchServices@2022-09-01' = {
   name: searchName
   location: location
   sku: {
-    name: 'basic'
+    name: 'standard'
   }
   properties: {
     replicaCount: 1

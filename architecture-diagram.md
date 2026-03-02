@@ -73,7 +73,7 @@ graph TB
 | SQL Server | Azure SQL Server | - | UK South | Database server (Entra ID auth only) |
 | Northwind DB | Azure SQL Database | Basic | UK South | Expense data storage |
 | Azure OpenAI | Cognitive Services | S0 | Sweden Central | GPT-4o model for AI chat |
-| AI Search | Azure Cognitive Search | S0 (Standard) | UK South | RAG / search capabilities |
+| AI Search | Azure Cognitive Search | Standard | UK South | RAG / search capabilities |
 
 ## Authentication Flow
 
