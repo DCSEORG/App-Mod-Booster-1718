@@ -1,0 +1,247 @@
+@page
+@model ChatApp.Pages.ChatModel
+@{
+    ViewData["Title"] = "AI Assistant";
+    Layout = "_Layout";
+}
+
+<div class="chat-container">
+    <!-- Header -->
+    <div class="chat-header">
+        <div class="d-flex align-items-center gap-3">
+            <div class="ai-avatar">
+                <i class="bi bi-robot"></i>
+            </div>
+            <div>
+                <h5 class="mb-0">Expense AI Assistant</h5>
+                <small class="text-muted">Powered by Azure OpenAI GPT-4o</small>
+            </div>
+        </div>
+        <a href="/Index" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-grid me-1"></i>Dashboard
+        </a>
+    </div>
+
+    <!-- Chat Messages -->
+    <div class="chat-messages" id="chatMessages">
+        <!-- Welcome message -->
+        <div class="message assistant-message">
+            <div class="message-avatar"><i class="bi bi-robot"></i></div>
+            <div class="message-bubble">
+                <div class="message-content">
+                    👋 Hello! I'm your Expense Management AI Assistant.<br><br>
+                    I can help you:<br>
+                    • <strong>List and filter</strong> your expenses<br>
+                    • <strong>Create</strong> new expense entries<br>
+                    • <strong>Submit</strong> expenses for approval<br>
+                    • <strong>Approve or reject</strong> submitted expenses<br><br>
+                    What would you like to do?
+                </div>
+                <div class="message-time">Just now</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Input -->
+    <div class="chat-input-area">
+        <div class="chat-input-wrapper">
+            <textarea
+                id="userInput"
+                class="chat-input"
+                placeholder="Ask me about your expenses..."
+                rows="1"
+                onkeydown="handleKeyDown(event)"
+                oninput="autoResize(this)"></textarea>
+            <button id="sendBtn" class="send-button" onclick="sendMessage()">
+                <i class="bi bi-send-fill"></i>
+            </button>
+        </div>
+        <div class="chat-suggestions">
+            <button class="suggestion-chip" onclick="sendSuggestion('Show all my expenses')">Show all expenses</button>
+            <button class="suggestion-chip" onclick="sendSuggestion('Show pending approval expenses')">Pending approval</button>
+            <button class="suggestion-chip" onclick="sendSuggestion('What expense categories are available?')">Categories</button>
+            <button class="suggestion-chip" onclick="sendSuggestion('Show approved expenses')">Approved expenses</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    const chatMessages = document.getElementById('chatMessages');
+    const userInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+
+    // Conversation history for context
+    let conversationHistory = [];
+
+    function getTime() {
+        return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // Escape HTML to prevent XSS
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.appendChild(document.createTextNode(text));
+        return div.innerHTML;
+    }
+
+    // Format markdown-style text to HTML (applied AFTER escaping)
+    function formatMessage(text) {
+        // First escape to prevent XSS
+        let escaped = escapeHtml(text);
+
+        // Apply formatting after escaping
+        // Bold: **text** → <strong>text</strong>
+        escaped = escaped.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+
+        // Process lines for lists
+        const lines = escaped.split('\n');
+        let result = '';
+        let inUl = false;
+        let inOl = false;
+        let olIndex = 0;
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            // Numbered list: lines starting with "1." "2." etc.
+            const olMatch = line.match(/^(\d+)\.\s+(.*)/);
+            // Bullet list: lines starting with "- " or "* "
+            const ulMatch = line.match(/^[-*]\s+(.*)/);
+
+            if (olMatch) {
+                if (!inOl) {
+                    if (inUl) { result += '</ul>'; inUl = false; }
+                    result += '<ol>';
+                    inOl = true;
+                }
+                result += `<li>${olMatch[2]}</li>`;
+            } else if (ulMatch) {
+                if (!inUl) {
+                    if (inOl) { result += '</ol>'; inOl = false; }
+                    result += '<ul>';
+                    inUl = true;
+                }
+                result += `<li>${ulMatch[1]}</li>`;
+            } else {
+                if (inUl) { result += '</ul>'; inUl = false; }
+                if (inOl) { result += '</ol>'; inOl = false; }
+                if (line.trim() === '') {
+                    result += '<br>';
+                } else {
+                    result += line + '<br>';
+                }
+            }
+        }
+
+        if (inUl) result += '</ul>';
+        if (inOl) result += '</ol>';
+
+        // Clean up extra <br> at end
+        result = result.replace(/(<br>)+$/, '');
+        return result;
+    }
+
+    function appendMessage(role, text) {
+        const isUser = role === 'user';
+        const div = document.createElement('div');
+        div.className = `message ${isUser ? 'user-message' : 'assistant-message'}`;
+
+        const avatarHtml = isUser
+            ? `<div class="message-avatar user-av"><i class="bi bi-person-fill"></i></div>`
+            : `<div class="message-avatar"><i class="bi bi-robot"></i></div>`;
+
+        const formattedText = isUser ? escapeHtml(text) : formatMessage(text);
+
+        div.innerHTML = `
+            ${!isUser ? avatarHtml : ''}
+            <div class="message-bubble ${isUser ? 'user-bubble' : ''}">
+                <div class="message-content">${formattedText}</div>
+                <div class="message-time">${getTime()}</div>
+            </div>
+            ${isUser ? avatarHtml : ''}
+        `;
+
+        chatMessages.appendChild(div);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function appendTypingIndicator() {
+        const div = document.createElement('div');
+        div.className = 'message assistant-message typing-indicator-wrapper';
+        div.id = 'typingIndicator';
+        div.innerHTML = `
+            <div class="message-avatar"><i class="bi bi-robot"></i></div>
+            <div class="message-bubble">
+                <div class="typing-dots">
+                    <span></span><span></span><span></span>
+                </div>
+            </div>
+        `;
+        chatMessages.appendChild(div);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function removeTypingIndicator() {
+        const indicator = document.getElementById('typingIndicator');
+        if (indicator) indicator.remove();
+    }
+
+    async function sendMessage() {
+        const text = userInput.value.trim();
+        if (!text) return;
+
+        userInput.value = '';
+        userInput.style.height = 'auto';
+        sendBtn.disabled = true;
+
+        appendMessage('user', text);
+        conversationHistory.push({ role: 'user', content: text });
+        appendTypingIndicator();
+
+        try {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: text,
+                    history: conversationHistory.slice(-10) // Last 10 messages for context
+                })
+            });
+
+            removeTypingIndicator();
+
+            if (response.ok) {
+                const data = await response.json();
+                const assistantText = data.response;
+                appendMessage('assistant', assistantText);
+                conversationHistory.push({ role: 'assistant', content: assistantText });
+            } else {
+                appendMessage('assistant', '❌ Sorry, I encountered an error. Please try again.');
+            }
+        } catch (err) {
+            removeTypingIndicator();
+            appendMessage('assistant', '❌ Network error. Please check your connection and try again.');
+        } finally {
+            sendBtn.disabled = false;
+            userInput.focus();
+        }
+    }
+
+    function sendSuggestion(text) {
+        userInput.value = text;
+        sendMessage();
+    }
+
+    function handleKeyDown(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    }
+
+    function autoResize(el) {
+        el.style.height = 'auto';
+        el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+    }
+</script>
+}
